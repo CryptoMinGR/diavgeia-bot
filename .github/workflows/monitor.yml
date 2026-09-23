@@ -1,0 +1,38 @@
+name: Continuous Diavgeia Monitor
+
+on:
+  schedule:
+    # Εκκινεί αυτόματα ανά 10 λεπτά
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Επιτρέπει και χειροκίνητη έναρξη
+
+permissions:
+  contents: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run 1-minute loop monitor
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python check.py
+
+      - name: Save and commit state
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add seen_guids.txt
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update seen decisions" && git push)
